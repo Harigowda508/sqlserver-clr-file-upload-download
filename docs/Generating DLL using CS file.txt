@@ -1,0 +1,105 @@
+1️⃣ Create Working Folder
+
+Open Command Prompt as Administrator 👈 important.
+
+mkdir C:\CLRExport
+cd C:\CLRExport
+
+2️⃣ Create C# Source File
+notepad FileExporter.cs
+
+
+CS file creation Paste this exact code and save:
+
+using System;
+using System.Data.SqlTypes;
+using System.Data.SqlClient;
+using System.IO;
+using Microsoft.SqlServer.Server;
+
+public class FileExporter
+{
+    [SqlProcedure]
+    public static void p_TDECrtDwnld(SqlString tableName, SqlString fileName, SqlString outputPath)
+    {
+        // Basic table name validation: alphanumeric and underscores only
+        string cleanTableName = tableName.Value;
+        if (System.Text.RegularExpressions.Regex.IsMatch(cleanTableName, @"^[A-Za-z0-9_]+$") == false)
+        {
+            throw new ArgumentException("Invalid table name.");
+        }
+
+        string query = string.Format("SELECT FileContent FROM [{0}] WHERE FileName = @FileName", cleanTableName);
+
+        using (SqlConnection conn = new SqlConnection("context connection=true"))
+        {
+            conn.Open();
+            using (SqlCommand cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@FileName", fileName.Value);
+                byte[] fileBytes = cmd.ExecuteScalar() as byte[];
+
+                if (fileBytes != null)
+                {
+                    File.WriteAllBytes(outputPath.Value, fileBytes);
+                }
+                else
+                {
+                    throw new Exception("No matching file found.");
+                }
+            }
+        }
+    }
+}
+
+
+3️⃣ Compile DLL in SAME Folder (C:\CLRExport)
+Use 64-bit .NET Framework compiler
+"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" ^
+ /target:library ^
+ /out:C:\CLRExport\fileexporter.dll ^
+ /reference:System.Data.dll ^
+ /reference:"C:\Program Files\Microsoft SQL Server\160\SDK\Assemblies\Microsoft.SqlServer.Server.dll" ^
+ C:\CLRExport\FileExporter.cs
+
+
+✔ Output will be:
+
+C:\CLRExport\FileExporter.cs
+C:\CLRExport\fileexporter.dll
+
+4️⃣ Verify DLL Created
+dir C:\CLRExport
+
+
+You must see:
+
+FileExporter.cs
+fileexporter.dll (non-zero size)
+
+5- Register DLL in SQL Server
+CREATE ASSEMBLY fileexporter
+FROM 'D:\SqlClrDll\fileexporter.dll'
+WITH PERMISSION_SET = EXTERNAL_ACCESS;
+
+
+Then trust the assembly (as already documented).
+
+6- Very Important Notes (Read This 👇)
+❌ Don’t do this
+
+Don’t compile with .NET Core
+
+Don’t use Encoding.*
+
+Don’t store DLL + output files in same folder
+
+Don’t skip NTFS permissions
+
+✅ Do this
+
+Use Framework64
+
+Use File.ReadAllBytes / WriteAllBytes
+
+Grant SQL Service Account RX on DLL folder
