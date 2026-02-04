@@ -26,6 +26,5 @@ The solution is compatible with **SQL Server 2017+ and SQL Server 2022**, follow
 - Download procedure (DB → File system)
 - Storage table (`t_LIVECertificateBackups`)
 
----
+-
 
-## 📁 Repository Structure
